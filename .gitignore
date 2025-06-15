@@ -4,6 +4,9 @@ node_modules/
 # Environment variables file
 .env
 
+# Uploaded files (handled by external storage like Cloudinary)
+uploads/
+
 # Optional: Logs, build artifacts etc.
 *.log
 dist/
