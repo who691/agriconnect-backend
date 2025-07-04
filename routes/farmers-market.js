@@ -550,4 +550,4 @@ router.delete('/:id', authMiddleware, adminAuth, async (req, res) => { // Ensure
     }
 });
 
-module.exports = router;
+module.exports = router;   
