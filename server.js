@@ -78,6 +78,7 @@ const userRoutes = require('./routes/users'); // Contains standard and admin use
 const addressRoutes = require('./routes/addresses');
 const mediaRoutes = require('./routes/media');
 const paymentRoutes = require('./routes/payment');
+const farmersMarketRoutes = require('./routes/farmers-market');
 
 
 // --- MOUNT API ROUTES --- (keep existing mounts)
@@ -89,6 +90,7 @@ app.use('/api/content', contentRoutes);
 app.use('/api/users', userRoutes); // This router handles /users, /users/admin/*
 app.use('/api/addresses', addressRoutes);
 app.use('/api/media', mediaRoutes);
+app.use('/api/farmers-market', farmersMarketRoutes);
 
 // Mount payment routes only if Chapa is initialized
 if (chapa) {
