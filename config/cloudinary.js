@@ -53,9 +53,20 @@ const groupCoverStorage = new CloudinaryStorage({
 });
 // --- END ADD ---
 
+const marketBannerStorage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'agriconnect/market-banners',
+    allowed_formats: ['jpg', 'png', 'jpeg'],
+    transformation: [{ width: 1600, height: 900, crop: 'limit' }],
+  },
+});
+
+
 module.exports = {
   productStorage,
   avatarStorage,
   chatMediaStorage,
   groupCoverStorage,
+  marketBannerStorage,
 };
