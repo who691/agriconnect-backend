@@ -9,7 +9,7 @@ const router = express.Router();
 // @route   POST /api/auth/register
 // @desc    Register a new user
 router.post('/register', async (req, res) => {
-  const { fullName, phone, password, role, location, language } = req.body;
+  const { fullName, phone, password, role, location, language, area } = req.body;
 
   // Basic validation
   if (!fullName || !phone || !password || !role || !location || !language) {
@@ -36,7 +36,8 @@ router.post('/register', async (req, res) => {
           type: 'Point',
           coordinates: [location.longitude, location.latitude] // GeoJSON format: [lng, lat]
       },
-      language: language
+      language: language,
+      area: area
     });
 
     // 3. Hash the password
@@ -70,7 +71,7 @@ router.post('/login', async (req, res) => {
 
     try {
         // 1. Check if user exists
-        const user = await User.findOne({ phone });
+        const user = await User.findOne({ phone }).select('+password');
         if (!user) {
             return res.status(400).json({ error: 'Invalid credentials.' });
         }
@@ -101,6 +102,8 @@ router.post('/login', async (req, res) => {
                     phone: user.phone,
                     role: user.role,
                     avatarUrl: user.avatarUrl,
+                    language: user.language,
+                    area: user.area,
                     // You can add location here if needed on login
                 }
             });
@@ -136,6 +139,66 @@ router.post('/change-password', authMiddleware, async (req, res) => {
     } catch (err) {
         console.error("Password change error:", err.message);
         res.status(500).send('Server Error');
+    }
+});
+
+router.post('/change-password', authMiddleware, async (req, res) => {
+    console.log("POST /api/auth/change-password received for user:", req.user.id); // Added log
+
+    const { oldPassword, newPassword } = req.body;
+
+    // Basic validation
+    if (!oldPassword || !newPassword) {
+        console.log("Change password error: Missing old or new password in body.");
+        return res.status(400).json({ error: 'Please provide both old and new passwords.' });
+    }
+
+     // It's good practice to validate new password length on the backend too
+     if (newPassword.length < 6) {
+         console.log("Change password error: New password too short.");
+         return res.status(400).json({ error: 'New password must be at least 6 characters long.' });
+     }
+
+
+    try {
+        // 1. Find the user by ID and EXPLICITLY SELECT the password field
+        const user = await User.findById(req.user.id).select('+password'); // <-- ADD THIS .select('+password')
+
+        if (!user) {
+            console.log("Change password error: User not found in DB for ID:", req.user.id);
+            // This case should ideally not happen if authMiddleware works correctly, but good for safety
+            return res.status(404).json({ error: 'User not found.' });
+        }
+
+        console.log("Change password: User found. Comparing passwords...");
+
+        // 2. Compare the provided old password with the hashed password from the database
+        // This should now work because 'user.password' will contain the hash
+        const isMatch = await bcrypt.compare(oldPassword, user.password);
+
+        if (!isMatch) {
+            console.log("Change password error: Incorrect old password.");
+            return res.status(400).json({ error: 'Incorrect current password.' }); // Send a specific error message
+        }
+
+        console.log("Change password: Old password matched. Hashing new password...");
+
+        // 3. If old password matches, hash the new password
+        const salt = await bcrypt.genSalt(10); // Generate a salt
+        user.password = await bcrypt.hash(newPassword, salt); // Hash the new password
+
+        // 4. Save the user with the new hashed password
+        await user.save();
+
+        console.log("Change password: Password updated successfully for user:", user._id);
+
+        // 5. Send success response
+        res.json({ msg: 'Password changed successfully' }); // Send a success message
+
+    } catch (err) {
+        // This catch block handles unexpected errors like database issues
+        console.error('Server Error changing password:', err.message, err); // Log detailed server error
+        res.status(500).json({ error: 'Server Error changing password.' }); // Send a generic server error message
     }
 });
 
