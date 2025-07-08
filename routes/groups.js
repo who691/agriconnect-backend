@@ -302,6 +302,59 @@ router.get('/:id/messages', authMiddleware, async (req, res) => {
 });
 
 
+router.post('/:id/messages', authMiddleware, async (req, res) => {
+    console.log(`POST /api/groups/${req.params.id}/messages received from user ${req.user.id}`);
+    const groupId = req.params.id;
+    const senderId = req.user.id;
+    const { content } = req.body; // <-- Uses 'content'
+
+    // Validate request body
+    if (!content || typeof content !== 'string' || content.trim() === '') {
+        console.log(`POST /api/groups/${groupId}/messages - Validation failed: Message content is empty or invalid.`);
+        return res.status(400).json({ msg: 'Message content is required.' });
+    }
+
+    try {
+        // 1. Verify group exists
+        const group = await FarmerGroup.findById(groupId).lean();
+        if (!group) {
+            console.log(`POST /api/groups/${groupId}/messages - Group not found.`);
+            return res.status(404).json({ msg: 'Group not found.' });
+        }
+
+        // 2. Verify user is a member of the group // <-- IMPORTANT SECURITY CHECK
+        const isMember = group.members?.some(memberId => memberId?.toString() === senderId.toString());
+        if (!isMember) {
+            console.log(`POST /api/groups/${groupId}/messages - User ${senderId} is not a member of group ${groupId}.`);
+            return res.status(403).json({ msg: 'Access denied. You are not a member of this group.' });
+        }
+
+        // 3. Create and save the new message
+        const newMessage = new Message({
+            groupId,
+            senderId,
+            content, // <-- Uses 'content'
+            sentAt: new Date(), // <-- Explicit timestamp
+        });
+
+        const savedMessage = await newMessage.save();
+        console.log(`POST /api/groups/${groupId}/messages - Message saved: ${savedMessage._id}`);
+
+        // 4. Populate sender details for the response
+        const populatedMessage = await Message.findById(savedMessage._id)
+            .populate('senderId', 'fullName avatarUrl _id') // <-- Populates _id
+            .lean(); // <-- Uses .lean()
+
+        console.log(`POST /api/groups/${groupId}/messages - Sent populated message response:`, JSON.stringify(populatedMessage, null, 2));
+
+        res.status(201).json(populatedMessage);
+
+    } catch (err) {
+        console.error(`Error sending message to group ${groupId} by user ${senderId}:`, err.message, err);
+        res.status(500).send('Server Error: Could not send your message.');
+    }
+});
+
 // @route   POST /api/groups/:id/toggle-membership
 // @desc    Join or leave a group
 // @access  Private
