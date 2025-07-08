@@ -43,19 +43,13 @@ const chapa = process.env.CHAPA_SECRET_KEY ? new Chapa({ secretKey: process.env.
 
 
 // --- MODELS --- (keep all your requires here to ensure they are loaded)
- try {
-    require('./models/User');
-    require('./models/Product');
-    require('./models/FarmerGroup');
-    require('./models/Order');
-    require('./models/QuickAction');
-    require('./models/Address');
-    require('./models/Message'); // Ensure Message is required
-    // Ensure all your models are listed here
-} catch (modelError) {
-    console.error("Error loading Mongoose models:", modelError);
-    // process.exit(1); // Commented out to potentially allow server start if only models fail
-}
+const User = require('./models/User'); // Required if you populate 'senderId' with 'User' model
+const Product = require('./models/Product');
+const FarmerGroup = require('./models/FarmerGroup'); // Required for membership checks
+const Order = require('./models/Order');
+const QuickAction = require('./models/QuickAction');
+const Address = require('./models/Address');
+const Message = require('./models/Message');
 
 
 // --- MIDDLEWARE --- (keep cors, json, static)
